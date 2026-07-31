@@ -31,10 +31,13 @@
   },
 
   "bf16": {
-    "enabled": true
+    "enabled": "auto"
+  },
+
+  "fp16": {
+    "enabled": "auto"
   },
 
   "steps_per_print": 10,
   "wall_clock_breakdown": false
 }
-

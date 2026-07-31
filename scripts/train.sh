@@ -27,6 +27,7 @@ ARGS=(
     --run_name "$RUN_NAME"
     --training_mode "$TRAINING_MODE"
     --bf16 "$BF16"
+    --fp16 "$FP16"
     --lora_r "$LORA_R"
     --lora_alpha "$LORA_ALPHA"
     --lora_dropout "$LORA_DROPOUT"

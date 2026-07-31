@@ -31,9 +31,14 @@ from utils import _log
 def train():
     parser = HfArgumentParser((ModelArguments, DataArguments, GemmaSFTTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-    compute_dtype = torch.bfloat16
+    if training_args.bf16:
+        compute_dtype = torch.bfloat16
+    elif training_args.fp16:
+        compute_dtype = torch.float16
+    else:
+        compute_dtype = torch.float32
 
-    _log(f"Loading model: {model_args.model_id}")
+    _log(f"Loading model: {model_args.model_id} with dtype={compute_dtype}")
 
     model = Gemma4ForConditionalGeneration.from_pretrained(
         model_args.model_id,
