@@ -18,7 +18,8 @@ import copy
 import os
 import pathlib
 import sys
-from typing import Dict, List, Optional
+import ast
+from typing import Dict, List, Optional, Sequence, Union
 import torch
 import ujson as json
 import transformers
@@ -31,17 +32,25 @@ from utils import _pad_sequence
 
 IGNORE_INDEX = -100
 
+PathLike = Union[str, os.PathLike]
+ImageFolderInput = Optional[
+    Union[PathLike, Sequence[PathLike]]
+]
+
 class SupervisedDataset(Dataset):
     def __init__(
             self,
             data_path: str,
             processor: transformers.ProcessorMixin,
-            image_folder: str | None = None,
+            image_folder: ImageFolderInput = None,
             max_seq_length: int = 2304,
             max_decode_frames: int = 8,
             ) -> None:
         self.processor = processor
         self.image_folder = image_folder
+        self.image_folders = self._normalize_image_folders(image_folder)
+        print(f"[DEBUG] raw image_folder: {image_folder!r}")
+        print(f"[DEBUG] normalized image_folders: {self.image_folders!r}")
         self.max_seq_length = max_seq_length
         # Must be >= processor.video_processor.num_frames (default 32).
         # The processor re-samples from this pre-decoded array; passing fewer
@@ -50,30 +59,93 @@ class SupervisedDataset(Dataset):
         with open(data_path, "r") as f:
             self.samples: List[dict] = json.load(f)
 
+    @staticmethod
+    def _normalize_image_folders(
+            image_folder: ImageFolderInput,
+            ) -> List[str]:
+        if image_folder is None:
+            return []
+
+        # 命令列可能把 list 轉成：
+        # "['folder_a', 'folder_b']"
+        if isinstance(image_folder, str):
+            stripped = image_folder.strip()
+
+            if stripped.startswith("[") and stripped.endswith("]"):
+                try:
+                    parsed = ast.literal_eval(stripped)
+                except (ValueError, SyntaxError) as exc:
+                    raise ValueError(
+                        f"Invalid image_folder list: {image_folder}"
+                    ) from exc
+
+                if not isinstance(parsed, (list, tuple)):
+                    raise TypeError(
+                        "Parsed image_folder must be a list or tuple"
+                    )
+
+                raw_folders = list(parsed)
+            else:
+                raw_folders = [image_folder]
+
+        elif isinstance(image_folder, os.PathLike):
+            raw_folders = [image_folder]
+
+        elif isinstance(image_folder, Sequence):
+            raw_folders = list(image_folder)
+
+        else:
+            raise TypeError(
+                "image_folder must be a path string, os.PathLike, "
+                "a sequence of paths, or None; "
+                f"got {type(image_folder).__name__}"
+            )
+
+        normalized: List[str] = []
+
+        for folder in raw_folders:
+            if not isinstance(folder, (str, os.PathLike)):
+                raise TypeError(
+                    "Every image_folder entry must be a path string or "
+                    f"os.PathLike; got {type(folder).__name__}"
+                )
+
+            folder_str = os.path.expanduser(os.fspath(folder))
+
+            if not folder_str:
+                raise ValueError("image_folder entries must not be empty")
+
+            normalized.append(folder_str)
+
+        return normalized
+
     def _resolve_path(self, path: str) -> str:
         if path.startswith(("http://", "https://")):
             return path
 
-        # 原路徑存在
+        # JSON 本身已是有效路徑
         if os.path.exists(path):
             return path
 
-        # 原路徑不存在，但加 .mp4 後存在
+        # JSON 路徑缺少 .mp4
         if os.path.exists(path + ".mp4"):
             return path + ".mp4"
 
-        if self.image_folder:
-            candidate = os.path.join(self.image_folder, path)
+        # 依序搜尋所有 image_folder
+        for image_folder in self.image_folders:
+            candidate = os.path.join(image_folder, path)
 
-            # image_folder + 原路徑存在
             if os.path.exists(candidate):
                 return candidate
 
-            # image_folder + 原路徑 + .mp4 存在
-            if os.path.exists(candidate + ".mp4"):
-                return candidate + ".mp4"
+            candidate_mp4 = candidate + ".mp4"
+            if os.path.exists(candidate_mp4):
+                return candidate_mp4
 
-        return path
+        raise FileNotFoundError(
+            f"找不到媒體檔案：{path}\n"
+            f"搜尋資料夾：{self.image_folders}"
+        )
 
     def _load_image(self, src) -> Image.Image:
         if isinstance(src, Image.Image):
@@ -90,87 +162,181 @@ class SupervisedDataset(Dataset):
         raise TypeError(f"Unsupported image type: {type(src)}")
 
     def _load_video_as_array(self, src, num_frames: int = 32):
-        """Decode with PyAV (bundled FFmpeg) -> (numpy [T,H,W,C] uint8, fps float, total frames int)."""
-        import av, numpy as np
+        """
+        Decode video with PyAV.
+
+        Returns:
+            frames:
+                numpy.ndarray with shape [T, H, W, C], dtype uint8
+            fps:
+                Detected video FPS
+            total_num_frames:
+                Number of sampled frames returned
+        """
+        import av
+        import numpy as np
 
         path = self._resolve_path(src) if isinstance(src, str) else src
 
-        # 如果 JSON 裡的影片路徑沒有 .mp4，但實際檔案有 .mp4，就自動補上
         if isinstance(path, str) and not os.path.exists(path):
             if os.path.exists(path + ".mp4"):
                 path = path + ".mp4"
 
-        container = av.open(path)
-        stream = container.streams.video[0]
+        container = None
 
-        fps = float(stream.average_rate) if stream.average_rate else 25.0
+        try:
+            try:
+                container = av.open(path)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"PyAV failed to open video: {path}"
+                ) from exc
 
-        # Determine the total frame count WITHOUT decoding, so we can compute the
-        # sampling indices up front and only convert the frames we keep.
-        #   1. stream.frames (from container metadata, no decode)
-        #   2. duration * fps (stream duration, else container duration)
-        original_total_num_frames = stream.frames or 0
-        if original_total_num_frames <= 0:
-            duration_sec = None
-            if stream.duration is not None and stream.time_base is not None:
-                duration_sec = float(stream.duration * stream.time_base)
-            elif container.duration is not None:
-                duration_sec = float(container.duration) / av.time_base
-            if duration_sec:
-                original_total_num_frames = int(duration_sec * fps)
+            video_streams = container.streams.video
 
-        if original_total_num_frames > 0:
-            # Fast path: only decode/convert the frames at the target indices.
-            indices = torch.linspace(
+            if len(video_streams) == 0:
+                raise ValueError(
+                    f"Video contains no video stream: {path}"
+                )
+
+            stream = video_streams[0]
+
+            fps = (
+                float(stream.average_rate)
+                if stream.average_rate
+                else 25.0
+            )
+
+            original_total_num_frames = stream.frames or 0
+
+            if original_total_num_frames <= 0:
+                duration_sec = None
+
+                if (
+                    stream.duration is not None
+                    and stream.time_base is not None
+                ):
+                    duration_sec = float(
+                        stream.duration * stream.time_base
+                    )
+
+                elif container.duration is not None:
+                    duration_sec = (
+                        float(container.duration) / av.time_base
+                    )
+
+                if duration_sec and duration_sec > 0:
+                    original_total_num_frames = max(
+                        1,
+                        int(duration_sec * fps),
+                    )
+
+            if original_total_num_frames > 0:
+                indices = torch.linspace(
                     0,
                     original_total_num_frames - 1,
-                    steps=min(num_frames, original_total_num_frames),
-                    ).long().tolist()
-            wanted = set(indices)
-            last_wanted = max(wanted)
-
-            kept: Dict[int, "np.ndarray"] = {}
-            for i, frame in enumerate(container.decode(video=0)):
-                if i in wanted:
-                    kept[i] = frame.to_ndarray(format="rgb24")
-                if i >= last_wanted:
-                    break
-            container.close()
-
-            if kept:
-                # Drop any indices past the real end of the stream (in case the
-                # metadata-derived total over-counted), then stack in order.
-                indices = [i for i in indices if i in kept]
-                sampled = np.stack([kept[i] for i in indices], axis=0)
-                sampled_total_num_frames = sampled.shape[0]
-                return sampled, fps, sampled_total_num_frames
-
-            # Fall through to full decode if metadata was wrong and we kept nothing.
-            container = av.open(path)
-
-        # Fallback: frame count unknown (or metadata was unreliable) — decode the
-        # whole stream and sample afterwards.
-        all_frames = []
-        for frame in container.decode(video=0):
-            all_frames.append(frame.to_ndarray(format="rgb24"))
-
-        container.close()
-
-        if not all_frames:
-            raise ValueError(f"Video has no frames: {path}")
-
-        original_total_num_frames = len(all_frames)
-
-        indices = torch.linspace(
-                0,
-                original_total_num_frames - 1,
-                steps=min(num_frames, original_total_num_frames),
+                    steps=min(
+                        num_frames,
+                        original_total_num_frames,
+                    ),
                 ).long().tolist()
 
-        sampled = np.stack([all_frames[i] for i in indices], axis=0)
-        sampled_total_num_frames = sampled.shape[0]
+                wanted = set(indices)
+                last_wanted = max(wanted)
 
-        return sampled, fps, sampled_total_num_frames
+                kept: Dict[int, "np.ndarray"] = {}
+
+                try:
+                    for frame_index, frame in enumerate(
+                        container.decode(video=0)
+                    ):
+                        if frame_index in wanted:
+                            kept[frame_index] = frame.to_ndarray(
+                                format="rgb24"
+                            )
+
+                        if frame_index >= last_wanted:
+                            break
+
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Failed while decoding video: {path}"
+                    ) from exc
+
+                if kept:
+                    valid_indices = [
+                        index
+                        for index in indices
+                        if index in kept
+                    ]
+
+                    sampled = np.stack(
+                        [kept[index] for index in valid_indices],
+                        axis=0,
+                    )
+
+                    sampled_total_num_frames = sampled.shape[0]
+
+                    return (
+                        sampled,
+                        fps,
+                        sampled_total_num_frames,
+                    )
+
+                # Metadata may be incorrect. Reopen and use fallback decoding.
+                container.close()
+                container = av.open(path)
+
+                if len(container.streams.video) == 0:
+                    raise ValueError(
+                        f"Video contains no video stream after reopen: {path}"
+                    )
+
+            all_frames = []
+
+            try:
+                for frame in container.decode(video=0):
+                    all_frames.append(
+                        frame.to_ndarray(format="rgb24")
+                    )
+
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Failed during full video decode: {path}"
+                ) from exc
+
+            if not all_frames:
+                raise ValueError(
+                    f"Video contains no decodable frames: {path}"
+                )
+
+            original_total_num_frames = len(all_frames)
+
+            indices = torch.linspace(
+                0,
+                original_total_num_frames - 1,
+                steps=min(
+                    num_frames,
+                    original_total_num_frames,
+                ),
+            ).long().tolist()
+
+            sampled = np.stack(
+                [all_frames[index] for index in indices],
+                axis=0,
+            )
+
+            sampled_total_num_frames = sampled.shape[0]
+
+            return (
+                sampled,
+                fps,
+                sampled_total_num_frames,
+            )
+
+        finally:
+            if container is not None:
+                container.close()
 
     def _normalize_messages(self, messages: List[dict]):
         """Returns (normalized_messages, video_meta_list).
@@ -377,10 +543,46 @@ class SupervisedDataset(Dataset):
 
     def __getitem__(self, i: int) -> Dict[str, torch.Tensor]:
         sample = self.samples[i]
-        # fps from new-format JSON (video_metadata.fps) with fallback to legacy top-level fps
+
+        # fps from new-format JSON (video_metadata.fps)
+        # with fallback to legacy top-level fps
         meta = sample.get("video_metadata") or {}
         fps = meta.get("fps") or sample.get("fps")
-        return self._build_sample(sample["messages"], fps_override=fps)
+
+        video_paths = []
+
+        for message in sample.get("messages", []):
+            content = message.get("content", [])
+
+            if not isinstance(content, list):
+                content = [content]
+
+            for item in content:
+                if not isinstance(item, dict):
+                    continue
+
+                if item.get("type") != "video":
+                    continue
+
+                for key in ("video", "path", "url"):
+                    if key in item:
+                        video_paths.append(str(item[key]))
+                        break
+
+        try:
+            return self._build_sample(
+                sample["messages"],
+                fps_override=fps,
+            )
+
+        except Exception as exc:
+            raise RuntimeError(
+                "\nFailed to build dataset sample.\n"
+                f"dataset_index: {i}\n"
+                f"video_paths: {video_paths}\n"
+                f"video_metadata: {meta}\n"
+                f"original_error: {type(exc).__name__}: {exc}"
+            ) from exc
 
 
 class DataCollatorForSupervisedDataset:
@@ -448,7 +650,7 @@ class DataCollatorForSupervisedDataset:
 def make_data_module(
         processor: transformers.ProcessorMixin,
         data_path: str,
-        image_folder: str | None = None,
+        image_folder: ImageFolderInput = None,
         max_seq_length: int = 2304,
         max_decode_frames: int = 8,
         ) -> dict:
