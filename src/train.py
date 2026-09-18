@@ -13,6 +13,8 @@ import os
 import pathlib
 import sys
 import torch
+import numpy as np
+
 from transformers import (
     AutoProcessor,
     Gemma4ForConditionalGeneration,
@@ -27,8 +29,42 @@ from sft import GemmaSFTTrainer
 from training_modes import apply_training_mode, configure_gradient_checkpointing
 from utils import _log
 
+def register_numpy_safe_globals():
+    """
+    Allow loading NumPy objects stored in older Hugging Face Trainer RNG states.
+
+    Only use this for checkpoints you trust.
+    """
+    safe_globals = [
+        np.ndarray,
+        np.dtype,
+        type(np.dtype(np.uint32)),
+    ]
+
+    try:
+        reconstruct = np.core.multiarray._reconstruct
+        safe_globals.append(
+            (reconstruct, "numpy.core.multiarray._reconstruct")
+        )
+    except Exception:
+        pass
+
+    try:
+        reconstruct = np._core.multiarray._reconstruct
+        safe_globals.append(
+            (reconstruct, "numpy._core.multiarray._reconstruct")
+        )
+        safe_globals.append(
+            (reconstruct, "numpy.core.multiarray._reconstruct")
+        )
+    except Exception:
+        pass
+
+    torch.serialization.add_safe_globals(safe_globals)
 
 def train():
+    register_numpy_safe_globals()
+
     parser = HfArgumentParser((ModelArguments, DataArguments, GemmaSFTTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     if training_args.bf16:
