@@ -1,11 +1,13 @@
 import argparse
 from config.common import to_shell_defaults
+from config.dense_lora_ft import TRAINING_PROFILE as DENSE_LORA_FINETUNE_PROFILE
 from config.full_ft import TRAINING_PROFILE as FULL_FINETUNE_PROFILE
 from config.lora_ft import TRAINING_PROFILE as LORA_FINETUNE_PROFILE
 from config.proj_only_ft import TRAINING_PROFILE as PROJECTOR_ONLY_PROFILE
 
 
 TRAINING_PROFILES = {
+    "dense_lora_ft": DENSE_LORA_FINETUNE_PROFILE,
     "full_ft": FULL_FINETUNE_PROFILE,
     "lora_ft": LORA_FINETUNE_PROFILE,
     "proj_only_ft": PROJECTOR_ONLY_PROFILE,

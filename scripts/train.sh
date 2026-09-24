@@ -14,7 +14,7 @@ export WANDB_LOG_MODEL="${WANDB_LOG_MODEL:-false}"
 
 set -e
 
-PROFILE="${1:?Usage: bash scripts/train.sh <full_ft|lora_ft|proj_only_ft>}"
+PROFILE="${1:?Usage: bash scripts/train.sh <full_ft|lora_ft|dense_lora_ft|proj_only_ft>}"
 
 eval "$(python3 -m config.entry "$PROFILE")"
 
