@@ -17,7 +17,7 @@ class ModelArguments:
     lora_dropout: float = field(default=COMMON_TRAINING_DEFAULTS["lora_dropout"], metadata={"help": "LoRA dropout"})
     training_mode: str = field(
         default=COMMON_TRAINING_DEFAULTS["training_mode"],
-        metadata={"help": "Training mode: full, lora, or projector_only"},
+        metadata={"help": "Training mode: full, lora, dense_lora, or projector_only"},
     )
 
 

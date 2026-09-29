@@ -1,5 +1,6 @@
 from peft import LoraConfig, get_peft_model
 from arguments import GemmaSFTTrainingArguments, ModelArguments
+from dense_lora import get_trainable_params, inject_dense_lora
 from utils import (
     _freeze_all,
     _freeze_llm,
@@ -92,6 +93,19 @@ def apply_training_mode(
 
         _log("Training mode: LoRA fine-tuning")
         _print_trainable_parameters(model)
+        return model
+
+    if model_args.training_mode == "dense_lora":
+        for param in model.parameters():
+            param.requires_grad = False
+        model = inject_dense_lora(
+            model,
+            rank=model_args.lora_r,
+            alpha=model_args.lora_alpha,
+            dropout=model_args.lora_dropout,
+        )
+        get_trainable_params(model)
+        _log("Training mode: DenseLoRA fine-tuning")
         return model
 
     raise ValueError(f"Unsupported training_mode: {model_args.training_mode}")

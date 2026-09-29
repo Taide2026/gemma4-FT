@@ -11,7 +11,8 @@ video decoding (bypasses system FFmpeg).
 src/
   train.py        entrypoint (Gemma4ForConditionalGeneration + LoRA)
   arguments.py    CLI argument dataclasses
-  training_modes.py training mode setup (full, LoRA, projector-only)
+  training_modes.py training mode setup (full, LoRA, DenseLoRA, projector-only)
+  dense_lora.py   DenseLoRA module injection
   sft.py          GemmaSFTTrainer with per-group LRs
   ds_wrapper.py   SupervisedDataset (messages format, PyAV video I/O)
 utils/
@@ -20,11 +21,13 @@ config/
   common.py       shared default values
   full_ft.py      full fine-tuning profile
   lora_ft.py      LoRA fine-tuning profile
+  dense_lora_ft.py DenseLoRA fine-tuning profile
   proj_only_ft.py projector-only fine-tuning profile
   entry.py        small CLI entry for scripts
 deepspeed_config/stage1.json   ZeRO-2 config
 scripts/full_ft.sh             full fine-tuning launcher
 scripts/lora_ft.sh             LoRA fine-tuning launcher
+scripts/dense_lora_ft.sh       DenseLoRA fine-tuning launcher
 scripts/proj_only_ft.sh        projector-only fine-tuning launcher
 scripts/train.sh               shared launcher used by profile wrappers
 ```

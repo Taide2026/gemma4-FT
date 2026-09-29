@@ -1,0 +1,127 @@
+可以。這個策略比「無標註影片固定壓中段」合理很多。
+
+  我會建議定成：
+
+  1. 無 GEBD
+      - uniform 8 frames
+      - 這就是你現在 stage1/ds_wrapper.py:92 的取樣邏輯
+  2. 有 GEBD
+      - 以 GEBD boundary seconds 為中心，在 boundary 周圍取 frame
+      - 讓模型看到 boundary 前後的狀態變化
+
+  但要注意：GEBD 給你的主要是 boundary timestamp，不是 action interval。
+  所以「針對該區間周圍展開」比較精確地說應該是：
+
+  around boundary t:
+    before t
+    at / near t
+    after t
+
+  ## 我建議的 8-frame 配置
+
+  ### 有 1 個 boundary
+
+  例如 boundary 在 t：
+
+  2 frames global context
+  3 frames before boundary
+  3 frames after boundary
+
+  像這樣：
+
+  [clip_start_context, clip_end_context,
+   t-0.6, t-0.3, t-0.1,
+   t+0.1, t+0.3, t+0.6]
+
+  這很適合讓模型看到「改變前」和「改變後」。
+
+  ## 有多個 boundary 時
+
+  你的 CSV 一支 clip 可能很多 boundary，不能每個都展開，不然 8 frames 不夠。
+
+  我會先這樣做：
+
+  ### 訓練時隨機挑 1 個 boundary
+
+  每次取同一支 clip 時：
+
+  - 從該 ID 的 boundary seconds 隨機挑一個 t
+  - 圍繞它採 6 frames
+  - 再留 2 frames 做全局 context
+
+  這樣 epoch 之間能看到不同 boundary。
+
+  ## 不建議一開始做的事
+
+  不要先把所有 boundary 都混在 8 frames 裡，例如：
+
+  每個 boundary 各抓 1 frame
+
+  這會讓模型看到很多「點」，但看不到 boundary 的前後變化。
+  GEBD 的價值正是 transition，所以周圍展開比 boundary 點本身重要。
+
+  ## 建議的 sampling spec
+
+  我會先採這版：
+
+  if video_id not in gebd_csv:
+      sample 8 uniform frames
+  else:
+      choose one boundary second t
+      sample:
+          uniform context frames at 15% and 85% of clip
+          boundary local frames at:
+              t - 0.60s
+              t - 0.35s
+              t - 0.10s
+              t + 0.10s
+              t + 0.35s
+              t + 0.60s
+
+  最後做：
+
+  - clamp 到 [0, duration]
+  - 對應到 nearest frame index
+  - 若重複 frame index，補 uniform frame
+
+  ## 一個實際例子
+
+  10 秒 clip，boundary t = 4.2s：
+
+  context:
+    1.5s, 8.5s
+
+  local:
+    3.6s, 3.85s, 4.1s,
+    4.3s, 4.55s, 4.8s
+
+  總共 8 frames。
+
+  ## 會不會讓訓練分佈不一致？
+
+  會有一點：
+
+  - 無 GEBD：全局 uniform
+  - 有 GEBD：局部 transition-biased
+
+  但目前 GEBD 對到的只有 2135 / 54618 clips，約 3.9%。
+  這個比例不大，先這樣做是可控的。
+
+  真正要注意的是你的 supervision：
+
+  - 如果你的 task 還是 action caption / action recognition，boundary-aware sampling 可能改善有 transition 的 clip，也可能讓某些動作主體訊號
+    變少
+  - 所以保留 2 個 global context frames 是必要的
+
+  ## 結論
+
+  可以，建議直接定為：
+
+  No GEBD:
+    uniform 8
+
+  Has GEBD:
+    2 global uniform/context frames
+    6 local frames around one sampled GEBD boundary
+
+  這是我會先實作的版本。
