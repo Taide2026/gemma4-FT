@@ -13,3 +13,5 @@ test_results
 scripts/uv
 slurm-gemma4-full-ft-*.err
 slurm-gemma4-full-ft-*.out
+.vercel
+.env*

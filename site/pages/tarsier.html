@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+/* base reset (was supplied by the artifact host) */
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Tarsier 圖解</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow reading column; each section = one huge picture + one sentence. Night-forest palette, amber = tarsier eye. */
+:root{
+  --bg:#eef2ec;        /* pale leaf */
+  --paper:#f9fbf7;
+  --ink:#1d2b28;       /* deep forest ink */
+  --muted:#5b6b66;
+  --line:#c9d4cc;
+  --eye:#d9901a;       /* amber, the tarsier's eye */
+  --eye-soft:#f5e2bd;
+  --moss:#3f7a5c;      /* trainable / good */
+  --moss-soft:#d5e8dc;
+  --ice:#5a7fa6;       /* frozen */
+  --ice-soft:#dbe6f1;
+  --bad:#b5483a;
+  --bad-soft:#f2d8d3;
+  --f-display:"LXGW WenKai TC","Kaiti TC","STKaiti",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121a18;--paper:#19231f;--ink:#e3ebe6;--muted:#9aaba4;--line:#2e3c37;
+  --eye:#f0ac3c;--eye-soft:#3d2f17;--moss:#6cbf93;--moss-soft:#1f3a2c;
+  --ice:#8fb3da;--ice-soft:#1e2d3d;--bad:#e27b6c;--bad-soft:#3d221e;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121a18;--paper:#19231f;--ink:#e3ebe6;--muted:#9aaba4;--line:#2e3c37;
+  --eye:#f0ac3c;--eye-soft:#3d2f17;--moss:#6cbf93;--moss-soft:#1f3a2c;
+  --ice:#8fb3da;--ice-soft:#1e2d3d;--bad:#e27b6c;--bad-soft:#3d221e;color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.7}
+.wrap{max-width:860px;margin:0 auto;padding-inline:20px;padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:clamp(2.4rem,7vw,4rem)}
+h2{font-size:clamp(1.7rem,4.5vw,2.4rem)}
+h3{font-size:1.2rem}
+p{margin:0;max-width:62ch}
+.tag{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--eye);font-weight:700}
+.lead{font-size:1.2rem;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+.big{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px;overflow-x:auto}
+.big svg{display:block;width:100%;height:auto;min-width:560px}
+.note{font-size:.95rem;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+b.eye{color:var(--eye)}
+svg text{font-family:var(--f-body)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center}
+.hero>div{min-width:0;display:flex;flex-direction:column;gap:12px}
+@media (max-width:560px){.hero{grid-template-columns:1fr}.hero svg{width:120px}}
+
+/* stages timeline */
+.stages{display:grid;gap:14px}
+.stage{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:start;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.stage>div{min-width:0}
+.stage .k{font-family:var(--f-display);font-size:1.3rem;font-weight:700}
+.stage .k small{display:block;font-family:var(--f-mono);font-size:.72rem;color:var(--muted);font-weight:500;letter-spacing:.06em}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:.8rem;padding:2px 10px;border-radius:99px;background:var(--moss-soft);color:var(--ink)}
+.chip.ice{background:var(--ice-soft)}
+.chip.eye{background:var(--eye-soft)}
+@media (max-width:560px){.stage{grid-template-columns:1fr;gap:6px}}
+
+/* tabs for T1/T2 */
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tabs button{font:inherit;font-family:var(--f-display);font-size:1.05rem;padding:6px 16px;border-radius:99px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tabs button:focus-visible{outline:3px solid var(--eye);outline-offset:2px}
+
+/* bars */
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar{display:grid;grid-template-columns:minmax(0,190px) 1fr 52px;gap:12px;align-items:center;font-size:.95rem}
+.bar .track{height:22px;background:var(--bg);border-radius:6px;position:relative;overflow:hidden}
+.bar .fill{height:100%;border-radius:6px;background:var(--line)}
+.bar.us .fill{background:var(--eye)}
+.bar.us{font-weight:700}
+.bar.drop .fill{background:var(--bad)}
+.bar .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.axis{display:grid;grid-template-columns:minmax(0,190px) 1fr 52px;gap:12px;font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.axis div:nth-child(2){display:flex;justify-content:space-between}
+@media (max-width:560px){.bar,.axis{grid-template-columns:minmax(0,110px) 1fr 44px;font-size:.85rem}}
+
+/* compare table */
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:.95rem}
+th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-display);font-size:1.05rem}
+tr:last-child td{border-bottom:0}
+td.us{background:var(--eye-soft)}
+
+/* insights */
+.ins{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.in{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.in .n{font-family:var(--f-display);font-size:2rem;line-height:1;color:var(--eye)}
+.in h3{font-size:1.15rem}
+.in p{font-size:.95rem;color:var(--muted)}
+@media (max-width:640px){.ins{grid-template-columns:1fr}}
+
+.you{background:var(--ink);color:var(--bg);border-radius:16px;padding:26px}
+.you h2{color:var(--eye)}
+.you ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:10px}
+.you code{font-family:var(--f-mono);font-size:.88em;background:color-mix(in srgb,var(--bg) 15%,transparent);padding:1px 6px;border-radius:4px}
+
+@media (prefers-reduced-motion:no-preference){
+  .blink{animation:blink 5s infinite}
+  @keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+  .ball{animation:none}
+}
+</style>
+<style>
+:root{--eye-inv:#f0ac3c}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--eye-inv:#8a5600}}
+:root[data-theme="dark"]{--eye-inv:#8a5600}
+.you h2,.you .tag{color:var(--eye-inv)}
+.site-top{max-width:880px;margin:0 auto;padding:16px 20px 0}
+.site-back{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--line);border-radius:99px;background:var(--paper);color:var(--ink);font:500 14px/1.4 var(--f-body);text-decoration:none}
+.site-back:hover{border-color:var(--eye)}
+.site-back:focus-visible{outline:3px solid var(--eye);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="site-top"><a class="site-back" id="site-back" href="../index.html#tarsier">← 全部頁面</a></div>
+<script>try{if(window.self!==window.top)document.querySelector(".site-top").hidden=true}catch(e){document.querySelector(".site-top").hidden=true}</script>
+<div class="wrap">
+
+<!-- HERO -->
+<header class="hero">
+  <svg width="170" viewBox="0 0 170 170" aria-hidden="true">
+    <circle cx="85" cy="92" r="70" fill="var(--moss-soft)"/>
+    <ellipse cx="85" cy="98" rx="56" ry="50" fill="var(--muted)" opacity=".35"/>
+    <g class="blink" style="transform-origin:85px 88px">
+      <circle cx="58" cy="88" r="26" fill="var(--eye)"/><circle cx="112" cy="88" r="26" fill="var(--eye)"/>
+      <circle cx="58" cy="88" r="11" fill="var(--ink)"/><circle cx="112" cy="88" r="11" fill="var(--ink)"/>
+      <circle cx="62" cy="83" r="4" fill="var(--paper)"/><circle cx="116" cy="83" r="4" fill="var(--paper)"/>
+    </g>
+    <path d="M80 118 q5 5 10 0" stroke="var(--ink)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </svg>
+  <div>
+    <span class="tag">ByteDance · 2024 / 2025</span>
+    <h1>Tarsier 眼鏡猴</h1>
+    <p class="lead">一個「看影片、把發生的事講得很細」的模型。<br>架構很普通，<b class="eye">強在訓練方法和資料</b>。</p>
+  </div>
+</header>
+
+<!-- ONE LINE -->
+<section>
+  <span class="tag">一句話</span>
+  <h2>看 8～16 張圖，說出影片裡「按順序發生了什麼」</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 230" role="img" aria-label="輸入是一串影格加一句指令，輸出是一段依時間順序的描述">
+      <text x="0" y="22" font-size="15" fill="var(--muted)" font-weight="700">輸入：一串影格 + 一句話</text>
+      <!-- frames with moving ball -->
+      <g>
+        <rect x="0" y="40" width="80" height="60" rx="6" fill="var(--ice-soft)" stroke="var(--line)"/><circle cx="18" cy="88" r="8" fill="var(--eye)"/><text x="4" y="54" font-size="11" fill="var(--muted)">0.0s</text>
+        <rect x="90" y="40" width="80" height="60" rx="6" fill="var(--ice-soft)" stroke="var(--line)"/><circle cx="125" cy="70" r="8" fill="var(--eye)"/><text x="94" y="54" font-size="11" fill="var(--muted)">1.1s</text>
+        <rect x="180" y="40" width="80" height="60" rx="6" fill="var(--ice-soft)" stroke="var(--line)"/><circle cx="220" cy="58" r="8" fill="var(--eye)"/><text x="184" y="54" font-size="11" fill="var(--muted)">2.2s</text>
+        <rect x="270" y="40" width="80" height="60" rx="6" fill="var(--ice-soft)" stroke="var(--line)"/><circle cx="318" cy="72" r="8" fill="var(--eye)"/><text x="274" y="54" font-size="11" fill="var(--muted)">3.3s</text>
+        <rect x="360" y="40" width="80" height="60" rx="6" fill="var(--ice-soft)" stroke="var(--line)"/><circle cx="420" cy="88" r="8" fill="var(--eye)"/><text x="364" y="54" font-size="11" fill="var(--muted)">4.4s</text>
+      </g>
+      <text x="455" y="78" font-size="26" fill="var(--muted)">…</text>
+      <rect x="500" y="48" width="290" height="44" rx="22" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5"/>
+      <text x="520" y="76" font-size="16" fill="var(--ink)">「Describe the video in detail.」</text>
+      <!-- arrow -->
+      <path d="M400 112 v30" stroke="var(--ink)" stroke-width="2.5" marker-end="url(#ah)"/>
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink)"/></marker></defs>
+      <text x="0" y="170" font-size="15" fill="var(--muted)" font-weight="700">輸出：依時間順序的長描述</text>
+      <rect x="0" y="182" width="800" height="44" rx="8" fill="var(--eye-soft)"/>
+      <text x="16" y="210" font-size="16" fill="var(--ink)">球從左下被丟起 → 飛到最高點 → 往右下落地。鏡頭沒有移動。</text>
+    </svg>
+  </div>
+  <p class="note">論文評分用的是它自己做的 <b>DREAM-1K</b>：1,000 支影片，平均 8.9 秒、6.3 個事件、1.9 個鏡頭，每支都至少有一件「只看一張圖認不出來」的事。</p>
+</section>
+
+<!-- ARCH -->
+<section>
+  <span class="tag">裡面長怎樣</span>
+  <h2>每張圖各自看，時間交給 LLM 去想</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 260" role="img" aria-label="影格各自進入影像編碼器，經過 MLP 變成 token，全部接起來送進 LLM">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+      <!-- 3 lanes -->
+      <g font-size="13">
+        <rect x="0" y="20" width="60" height="44" rx="5" fill="var(--ice-soft)" stroke="var(--line)"/><text x="12" y="47" fill="var(--ink)">影格1</text>
+        <rect x="0" y="84" width="60" height="44" rx="5" fill="var(--ice-soft)" stroke="var(--line)"/><text x="12" y="111" fill="var(--ink)">影格2</text>
+        <rect x="0" y="148" width="60" height="44" rx="5" fill="var(--ice-soft)" stroke="var(--line)"/><text x="12" y="175" fill="var(--ink)">影格N</text>
+        <path d="M66 42h44M66 106h44M66 170h44" stroke="var(--muted)" stroke-width="2" marker-end="url(#ah2)"/>
+        <rect x="118" y="14" width="150" height="184" rx="10" fill="var(--ice-soft)" stroke="var(--ice)" stroke-width="2"/>
+        <text x="193" y="96" text-anchor="middle" font-size="17" font-weight="700" fill="var(--ink)">影像編碼器</text>
+        <text x="193" y="118" text-anchor="middle" fill="var(--muted)">CLIP-ViT</text>
+        <text x="193" y="138" text-anchor="middle" fill="var(--ice)" font-weight="700">❄ 凍結</text>
+        <path d="M274 106h36" stroke="var(--muted)" stroke-width="2" marker-end="url(#ah2)"/>
+        <rect x="318" y="66" width="80" height="80" rx="10" fill="var(--ice-soft)" stroke="var(--ice)" stroke-width="2"/>
+        <text x="358" y="102" text-anchor="middle" font-size="16" font-weight="700" fill="var(--ink)">MLP</text>
+        <text x="358" y="124" text-anchor="middle" fill="var(--ice)" font-weight="700">❄ 凍結</text>
+        <path d="M404 106h30" stroke="var(--muted)" stroke-width="2" marker-end="url(#ah2)"/>
+        <!-- token strip -->
+        <g>
+          <rect x="442" y="92" width="14" height="28" fill="var(--ice)"/><rect x="458" y="92" width="14" height="28" fill="var(--ice)"/><rect x="474" y="92" width="6" height="28" fill="var(--ink)"/>
+          <rect x="482" y="92" width="14" height="28" fill="var(--ice)"/><rect x="498" y="92" width="14" height="28" fill="var(--ice)"/><rect x="514" y="92" width="6" height="28" fill="var(--ink)"/>
+          <rect x="522" y="92" width="14" height="28" fill="var(--eye)"/><rect x="538" y="92" width="14" height="28" fill="var(--eye)"/>
+        </g>
+        <text x="442" y="140" font-size="11" fill="var(--muted)">圖 token｜分隔｜文字</text>
+        <path d="M558 106h26" stroke="var(--muted)" stroke-width="2" marker-end="url(#ah2)"/>
+        <rect x="592" y="14" width="200" height="184" rx="10" fill="var(--moss-soft)" stroke="var(--moss)" stroke-width="2.5"/>
+        <text x="692" y="88" text-anchor="middle" font-size="19" font-weight="700" fill="var(--ink)">LLM</text>
+        <text x="692" y="112" text-anchor="middle" fill="var(--muted)">7B / 34B 兩種大小</text>
+        <text x="692" y="136" text-anchor="middle" fill="var(--moss)" font-weight="700">🔥 全部參數都訓練</text>
+        <text x="692" y="160" text-anchor="middle" fill="var(--muted)">在這裡學「時間」</text>
+      </g>
+      <text x="0" y="238" font-size="14" fill="var(--muted)">Tarsier1 設定。Tarsier2 改從 Qwen2-VL-7B 初始化，而且三個部分全部都訓練。</text>
+    </svg>
+  </div>
+  <p class="note">跟你的 Gemma 設定幾乎一樣：影格各自編碼，圖和圖之間的關係全靠 LLM。差別在它把 LLM <b>整個</b>拿來訓練。</p>
+</section>
+
+<!-- PROCESS -->
+<section>
+  <span class="tag">怎麼訓練</span>
+  <h2>先大量「看很多種題目」，再用少量「精緻描述」收尾</h2>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-t1" aria-selected="true" aria-controls="p-t1">Tarsier1</button>
+    <button role="tab" id="tab-t2" aria-selected="false" aria-controls="p-t2">Tarsier2</button>
+  </div>
+
+  <div id="p-t1" role="tabpanel" class="stages">
+    <div class="stage">
+      <div class="k">起點<small>INIT</small></div>
+      <div>拿 LLaVA-NeXT（會看圖的模型）當起點。</div>
+    </div>
+    <div class="stage">
+      <div class="k">Stage 1<small>多任務預訓練</small></div>
+      <div><b class="mono">13.6M</b> 組影片-文字，所有任務都改寫成「看完寫文字」。
+        <div class="chips"><span class="chip">影片描述</span><span class="chip">動作辨識（含 Kinetics-700、SSv2）</span><span class="chip">影片問答</span><span class="chip">物件追蹤框</span><span class="chip">多圖 / 純文字</span></div>
+        <div class="chips"><span class="chip eye">每支影片隨機取 8～32 張：切成 N 段，每段隨機挑一張</span><span class="chip ice">48×A100 · 100K steps</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="k">Stage 2<small>指令微調</small></div>
+      <div><b class="mono">500K</b> 組人工標註。重點是 <b>100K</b> 支多鏡頭電影片段，每支都寫了從短到長不同粗細的描述，另外還有鏡頭運動、創意寫作的資料。
+        <div class="chips"><span class="chip eye">電影片段取 16 張，其他影片取 8 張；一定包含第一張和最後一張</span><span class="chip ice">16×A100 · 10K steps</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="p-t2" role="tabpanel" class="stages" hidden>
+    <div class="stage">
+      <div class="k">起點<small>INIT</small></div>
+      <div>改用 Qwen2-VL-7B 當起點。</div>
+    </div>
+    <div class="stage">
+      <div class="k">預訓練<small>PRE-TRAIN</small></div>
+      <div>資料加到 <b class="mono">40M</b> 組，其中 11M 是電影解說影片（旁白就是現成的描述），另外加了<b>預測影格順序</b>等合成任務。
+        <div class="chips"><span class="chip eye">16～128 張 / 支</span><span class="chip">全部參數都訓練</span><span class="chip ice">128×H100 · 約 200B tokens</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="k">SFT-1<small>對齊時間</small></div>
+      <div><b class="mono">150K</b> 支影片，描述裡的每件事都標出它發生在哪幾張影格：<span class="mono">&lt;frame: 3-5&gt; 狗跳上車</span>。
+        <div class="chips"><span class="chip eye">16 張</span><span class="chip">lr 2e-5 · 5000 步</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="k">SFT-2<small>講人話</small></div>
+      <div>拿掉影格標記，改練多種指令和寫作風格，讓描述讀起來自然、不再切成碎片。
+        <div class="chips"><span class="chip">lr 2e-6 · 5000 步</span></div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="k">DPO<small>偏好訓練</small></div>
+      <div>拿<b>正常影片</b>和<b>被弄壞的影片</b>各寫一次描述，教模型「正常影片那一版比較好」。
+        <div class="chips"><span class="chip eye">20K 組</span><span class="chip">1000 步</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DPO picture -->
+<section>
+  <span class="tag">Tarsier2 最聰明的招</span>
+  <h2>把影片弄壞，模型就會寫出錯的描述，拿來當負例</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 300" role="img" aria-label="四種弄壞影片的方法：交換片段、倒放、裁切、抽掉一半影格">
+      <g font-size="14">
+        <text x="0" y="22" font-weight="700" fill="var(--moss)">正常</text>
+        <g><rect x="120" y="6" width="60" height="26" rx="4" fill="var(--moss-soft)"/><text x="145" y="24" fill="var(--ink)">1</text>
+        <rect x="186" y="6" width="60" height="26" rx="4" fill="var(--moss-soft)"/><text x="211" y="24" fill="var(--ink)">2</text>
+        <rect x="252" y="6" width="60" height="26" rx="4" fill="var(--moss-soft)"/><text x="277" y="24" fill="var(--ink)">3</text>
+        <rect x="318" y="6" width="60" height="26" rx="4" fill="var(--moss-soft)"/><text x="343" y="24" fill="var(--ink)">4</text></g>
+        <text x="410" y="24" fill="var(--muted)">→ 描述 A（當作「好」的答案）</text>
+
+        <text x="0" y="82" font-weight="700" fill="var(--bad)">交換片段</text>
+        <g><rect x="120" y="66" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="145" y="84" fill="var(--ink)">1</text>
+        <rect x="186" y="66" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="211" y="84" fill="var(--ink)">4</text>
+        <rect x="252" y="66" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="277" y="84" fill="var(--ink)">3</text>
+        <rect x="318" y="66" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="343" y="84" fill="var(--ink)">2</text></g>
+        <text x="410" y="84" fill="var(--muted)">順序錯 → 時序幻覺</text>
+
+        <text x="0" y="132" font-weight="700" fill="var(--bad)">片段倒放</text>
+        <g><rect x="120" y="116" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="145" y="134" fill="var(--ink)">1</text>
+        <rect x="186" y="116" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="211" y="134" fill="var(--ink)">2</text>
+        <rect x="252" y="116" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="277" y="134" fill="var(--ink)">4</text>
+        <rect x="318" y="116" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="343" y="134" fill="var(--ink)">3</text></g>
+        <text x="410" y="134" fill="var(--muted)">方向錯 → 時序幻覺</text>
+
+        <text x="0" y="182" font-weight="700" fill="var(--bad)">只取一半時長</text>
+        <g><rect x="120" y="166" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="145" y="184" fill="var(--ink)">2</text>
+        <rect x="186" y="166" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="211" y="184" fill="var(--ink)">3</text></g>
+        <text x="410" y="184" fill="var(--muted)">看不到全部 → 漏掉事件</text>
+
+        <text x="0" y="232" font-weight="700" fill="var(--bad)">丟掉一半影格</text>
+        <g><rect x="120" y="216" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="145" y="234" fill="var(--ink)">1</text>
+        <rect x="252" y="216" width="60" height="26" rx="4" fill="var(--bad-soft)"/><text x="277" y="234" fill="var(--ink)">3</text></g>
+        <text x="410" y="234" fill="var(--muted)">資訊少 → 漏掉事件</text>
+
+        <text x="0" y="282" fill="var(--ink)">再用 AutoDQ 打分，只留下「A 真的比較好」的配對。</text>
+      </g>
+    </svg>
+  </div>
+  <p class="note">完全不用人工標註。拿掉這招（改成同一支影片取樣兩次）之後，DPO 幾乎沒有效果。</p>
+</section>
+
+<!-- RESULTS -->
+<section>
+  <span class="tag">結果</span>
+  <h2>7B 的開源模型，贏過 GPT-4o</h2>
+  <p class="note">DREAM-1K 整體 F1（越高越好）。數字取自兩篇論文的表格。</p>
+  <div class="bars">
+    <div class="bar"><span>PLLaVA-34B</span><div class="track"><div class="fill" style="width:56.4%"></div></div><span class="v">28.2</span></div>
+    <div class="bar"><span>GPT-4V</span><div class="track"><div class="fill" style="width:68.8%"></div></div><span class="v">34.4</span></div>
+    <div class="bar us"><span>Tarsier-7B</span><div class="track"><div class="fill" style="width:69.2%"></div></div><span class="v">34.6</span></div>
+    <div class="bar"><span>Gemini 1.5 Pro</span><div class="track"><div class="fill" style="width:72.4%"></div></div><span class="v">36.2</span></div>
+    <div class="bar us"><span>Tarsier-34B</span><div class="track"><div class="fill" style="width:72.6%"></div></div><span class="v">36.3</span></div>
+    <div class="bar"><span>GPT-4o</span><div class="track"><div class="fill" style="width:78.4%"></div></div><span class="v">39.2</span></div>
+    <div class="bar us"><span>Tarsier2-7B</span><div class="track"><div class="fill" style="width:84%"></div></div><span class="v">42.0</span></div>
+    <div class="axis"><div></div><div><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span></div><div></div></div>
+  </div>
+  <p class="note">人工盲測：Tarsier-34B 對 PLLaVA-34B <b class="mono">+51.4%</b>、對 GPT-4V <b class="mono">+12.3%</b>、對 Gemini 1.5 Pro <b class="mono">−6.7%</b>；Tarsier2-7B 對 GPT-4o <b class="mono">+8.6%</b>。<br>Tarsier2 也在 15 個公開 benchmark 拿到同尺寸最佳，包括偏重時序的 TVBench、TOMATO、Vinoground。</p>
+</section>
+
+<!-- ABLATION -->
+<section>
+  <span class="tag">拿掉會怎樣（Tarsier-7B 消融實驗）</span>
+  <h2>每拿掉一塊，分數就掉一截</h2>
+  <p class="note">左邊是 DREAM-1K F1（描述能力），右邊是 MVBench 準確率（綜合影片理解）。</p>
+  <div class="big" style="overflow-x:auto">
+    <svg viewBox="0 0 800 300" role="img" aria-label="消融實驗長條圖">
+      <g font-size="14">
+        <text x="250" y="18" fill="var(--muted)" font-weight="700">DREAM-1K F1（0～40）</text>
+        <text x="540" y="18" fill="var(--muted)" font-weight="700">MVBench（0～70）</text>
+        <!-- rows: each 42px; left bar x=250 width scale 250/40=6.25 ; right x=540 scale 250/70=3.571 -->
+        <g>
+          <text x="0" y="52" fill="var(--ink)" font-weight="700">完整版</text>
+          <rect x="250" y="36" width="216" height="22" rx="4" fill="var(--eye)"/><text x="472" y="53" class="mono" fill="var(--ink)">34.6</text>
+          <rect x="540" y="36" width="224" height="22" rx="4" fill="var(--eye)"/><text x="768" y="53" fill="var(--ink)">62.6</text>
+        </g>
+        <g>
+          <text x="0" y="94" fill="var(--ink)">不做 Stage 1 預訓練</text>
+          <rect x="250" y="78" width="191" height="22" rx="4" fill="var(--bad)"/><text x="447" y="95" fill="var(--ink)">30.6</text>
+          <rect x="540" y="78" width="166" height="22" rx="4" fill="var(--bad)"/><text x="712" y="95" fill="var(--ink)">46.6</text>
+        </g>
+        <g>
+          <text x="0" y="136" fill="var(--ink)">不做 Stage 2 指令微調</text>
+          <rect x="250" y="120" width="161" height="22" rx="4" fill="var(--bad)"/><text x="417" y="137" fill="var(--ink)">25.8</text>
+          <rect x="540" y="120" width="215" height="22" rx="4" fill="var(--bad)"/><text x="761" y="137" fill="var(--ink)">60.2</text>
+        </g>
+        <g>
+          <text x="0" y="178" fill="var(--ink)">預訓練只用 WebVid</text>
+          <rect x="250" y="162" width="196" height="22" rx="4" fill="var(--bad)"/><text x="452" y="179" fill="var(--ink)">31.4</text>
+          <rect x="540" y="162" width="173" height="22" rx="4" fill="var(--bad)"/><text x="719" y="179" fill="var(--ink)">48.4</text>
+        </g>
+        <g>
+          <text x="0" y="220" fill="var(--ink)">SFT 改用 VideoChat2 資料</text>
+          <rect x="250" y="204" width="140" height="22" rx="4" fill="var(--bad)"/><text x="396" y="221" fill="var(--ink)">22.4</text>
+          <rect x="540" y="204" width="218" height="22" rx="4" fill="var(--bad)"/><text x="762" y="221" fill="var(--ink)">61.0</text>
+        </g>
+        <g>
+          <text x="0" y="262" fill="var(--ink)" font-weight="700">只訓練 LLM 最上面 8 層</text>
+          <rect x="250" y="246" width="187" height="22" rx="4" fill="var(--bad)"/><text x="443" y="263" fill="var(--ink)">29.9</text>
+          <rect x="540" y="246" width="176" height="22" rx="4" fill="var(--bad)"/><text x="722" y="263" fill="var(--ink)">49.3</text>
+        </g>
+        <text x="0" y="292" font-size="12" fill="var(--muted)">Tarsier2：SFT 拿掉 &lt;frame&gt; 時間標記 → DREAM-1K −3.4、TempCompass 描述題 −9.9、幻覺測試 −3.3。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section>
+  <span class="tag">跟別人的訓練流程比</span>
+  <h2>別人：少量指令資料微調<br>Tarsier：大量多任務 → 精緻描述 → 全參數</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th></th><th>常見做法<br><span class="note">Video-LLaVA / VideoChat2 / PLLaVA</span></th><th>時空聯合編碼器<br><span class="note">VALOR / InternVideo2</span></th><th>Tarsier</th></tr></thead>
+      <tbody>
+        <tr><td><b>時間在哪裡學</b></td><td>多半靠 LLM，部分加 pooling</td><td>影像編碼器本身就看多張</td><td class="us">只靠 LLM，編碼器每張各自看</td></tr>
+        <tr><td><b>影片訓練量</b></td><td>100K～788K 組</td><td>大量對比式學習 / 遮罩重建</td><td class="us">13.6M → 40M 組，只用 next-token 預測</td></tr>
+        <tr><td><b>詳細描述資料</b></td><td>VideoChat2 裡只有 7K 組</td><td>—</td><td class="us">100K～150K 組人工精修，Tarsier2 還帶影格對齊</td></tr>
+        <tr><td><b>LLM 怎麼訓練</b></td><td>常用 LoRA 或只訓練部分層</td><td>—</td><td class="us">全參數（實驗證明比只訓練 top-8 層好很多）</td></tr>
+        <tr><td><b>收尾</b></td><td>通常 SFT 就結束</td><td>在各資料集上各自微調</td><td class="us">Tarsier2 加一段 DPO，負例來自弄壞的影片</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- INSIGHTS -->
+<section>
+  <span class="tag">論文重點觀察</span>
+  <h2>七個值得記住的發現</h2>
+  <div class="ins">
+    <div class="in"><span class="n">1</span><h3>架構不用花俏</h3><p>影格各自編碼，再接一個 LLM 就夠了。拉開差距的是資料的量、種類和品質。</p></div>
+    <div class="in"><span class="n">2</span><h3>「一張圖就猜得到」的影片沒什麼用</h3><p>WebVid 很多影片只看一張圖就能描述，所以他們重新取樣，優先挑有人或動物在動的影片。</p></div>
+    <div class="in"><span class="n">3</span><h3>全參數比只訓練部分層好</h3><p>只訓練最上面 8 層時，DREAM-1K −4.7、MVBench −13.3。</p></div>
+    <div class="in"><span class="n">4</span><h3>多任務預訓練決定理解力</h3><p>預訓練只用單一描述資料集，MVBench 就掉 14 分。動作辨識、問答、追蹤都要混進來。</p></div>
+    <div class="in"><span class="n">5</span><h3>精緻資料決定描述力</h3><p>SFT 資料換成量更多、但詳細描述很少的 VideoChat2，DREAM-1K 掉 12 分。</p></div>
+    <div class="in"><span class="n">6</span><h3>告訴模型「哪件事發生在第幾張」</h3><p>Tarsier2 用 &lt;frame: i-j&gt; 標記把事件綁到影格上，漏掉的事件和幻覺都變少，時序描述題進步最多。</p></div>
+    <div class="in"><span class="n">7</span><h3>打亂或倒放影片，就是免費的負例</h3><p>不用人工標註，只要把影片弄壞，就能得到帶時序錯誤的描述，拿來做 DPO。</p></div>
+    <div class="in"><span class="n">+</span><h3>取樣小技巧</h3><p>預訓練時分段隨機取樣（每個 epoch 看到不同的影格）；SFT 時一定放第一張和最後一張，動作快的影片多給影格。</p></div>
+  </div>
+</section>
+
+<!-- FOR YOU -->
+<section class="you">
+  <span class="tag">對你的 Gemma FFT</span>
+  <h2>可以直接搬過來用的</h2>
+  <ul>
+    <li>你的架構就是 Tarsier 架構（影格拆成 image，時間靠 LLM），所以<b>全參數</b>這個方向是對的。</li>
+    <li>把 <code>ds_wrapper.py</code> 的 <code>linspace</code> 取樣改成「分段隨機取樣」，並固定放入第一張和最後一張。</li>
+    <li>Kinetics 很多類別看一張圖就猜得到。混入 SSv2 這種非看動作不可的資料，或像 Tarsier 一樣篩掉靜態的影片。</li>
+    <li>把 GEBD 的 boundary 寫成 <code>&lt;frame: i-j&gt;</code> 形式的事件描述，就是低成本版的 SFT-1。</li>
+    <li>之後想再往上推：用打亂或倒放後的影片產生負例，做一輪 DPO。</li>
+  </ul>
+</section>
+
+<p class="note">來源：Tarsier (arXiv 2407.00634)、Tarsier2 (arXiv 2501.07888)。所有數字都取自兩篇論文的表格。</p>
+</div>
+
+<script>
+(function(){
+  var tabs=[["tab-t1","p-t1"],["tab-t2","p-t2"]];
+  function pick(id){
+    tabs.forEach(function(t){
+      var on=t[0]===id;
+      document.getElementById(t[0]).setAttribute("aria-selected",on?"true":"false");
+      document.getElementById(t[1]).hidden=!on;
+    });
+    try{localStorage.setItem("tarsier-tab",id)}catch(e){}
+  }
+  tabs.forEach(function(t){document.getElementById(t[0]).addEventListener("click",function(){pick(t[0])})});
+  try{var s=localStorage.getItem("tarsier-tab");if(s)pick(s)}catch(e){}
+})();
+</script>
+</body>
+</html>

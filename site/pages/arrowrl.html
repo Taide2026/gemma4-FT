@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+/* base reset (was supplied by the artifact host) */
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>ArrowRL 圖解</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: single reading column; each idea = one big drawing + one line. Same family as the Tarsier pages; here "forward" = moss, "reverse" = rust, the reward = amber. */
+:root{
+  --bg:#eef2ec;--paper:#f9fbf7;--ink:#1d2b28;--muted:#5b6b66;--line:#c9d4cc;
+  --eye:#d9901a;--eye-soft:#f5e2bd;--moss:#3f7a5c;--moss-soft:#d5e8dc;
+  --ice:#5a7fa6;--ice-soft:#dbe6f1;--bad:#b5483a;--bad-soft:#f2d8d3;
+  --f-display:"LXGW WenKai TC","Kaiti TC","STKaiti",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121a18;--paper:#19231f;--ink:#e3ebe6;--muted:#9aaba4;--line:#2e3c37;
+  --eye:#f0ac3c;--eye-soft:#3d2f17;--moss:#6cbf93;--moss-soft:#1f3a2c;
+  --ice:#8fb3da;--ice-soft:#1e2d3d;--bad:#e27b6c;--bad-soft:#3d221e;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121a18;--paper:#19231f;--ink:#e3ebe6;--muted:#9aaba4;--line:#2e3c37;
+  --eye:#f0ac3c;--eye-soft:#3d2f17;--moss:#6cbf93;--moss-soft:#1f3a2c;
+  --ice:#8fb3da;--ice-soft:#1e2d3d;--bad:#e27b6c;--bad-soft:#3d221e;color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.7}
+.wrap{max-width:860px;margin:0 auto;padding-inline:20px;padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:clamp(2.4rem,7vw,4rem)}
+h2{font-size:clamp(1.7rem,4.5vw,2.4rem)}
+h3{font-size:1.15rem}
+p{margin:0;max-width:62ch}
+.tag{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--eye);font-weight:700}
+.lead{font-size:1.2rem;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+.big{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px;overflow-x:auto}
+.big svg{display:block;width:100%;height:auto;min-width:580px}
+.note{font-size:.95rem;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+b.eye{color:var(--eye)} b.bad{color:var(--bad)} b.moss{color:var(--moss)}
+svg text{font-family:var(--f-body)}
+svg .m{font-family:var(--f-mono)}
+
+.hero{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center}
+.hero>div{min-width:0;display:flex;flex-direction:column;gap:12px}
+@media (max-width:560px){.hero{grid-template-columns:1fr}.hero svg{width:150px}}
+
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:.95rem}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-display);font-size:1.05rem}
+tr:last-child td{border-bottom:0}
+td.us{background:var(--eye-soft)}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td.up{color:var(--moss);font-weight:700}
+
+.ins{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.in{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.in .n{font-family:var(--f-display);font-size:2rem;line-height:1;color:var(--eye)}
+.in p{font-size:.95rem;color:var(--muted)}
+@media (max-width:640px){.ins{grid-template-columns:1fr}}
+
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.trio>div{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.trio .big-n{font-family:var(--f-mono);font-size:1.8rem;font-weight:700;line-height:1.1}
+.trio .lbl{font-size:.9rem;color:var(--muted)}
+@media (max-width:640px){.trio{grid-template-columns:1fr}}
+
+.you{background:var(--ink);color:var(--bg);border-radius:16px;padding:26px;display:flex;flex-direction:column;gap:14px}
+.you h2{color:var(--eye)}
+.you ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:10px}
+.you code{font-family:var(--f-mono);font-size:.88em;background:color-mix(in srgb,var(--bg) 15%,transparent);padding:1px 6px;border-radius:4px}
+.you .note{color:color-mix(in srgb,var(--bg) 70%,transparent)}
+</style>
+<style>
+:root{--eye-inv:#f0ac3c}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--eye-inv:#8a5600}}
+:root[data-theme="dark"]{--eye-inv:#8a5600}
+.you h2,.you .tag{color:var(--eye-inv)}
+.site-top{max-width:880px;margin:0 auto;padding:16px 20px 0}
+.site-back{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--line);border-radius:99px;background:var(--paper);color:var(--ink);font:500 14px/1.4 var(--f-body);text-decoration:none}
+.site-back:hover{border-color:var(--eye)}
+.site-back:focus-visible{outline:3px solid var(--eye);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="site-top"><a class="site-back" id="site-back" href="../index.html#arrowrl">← 全部頁面</a></div>
+<script>try{if(window.self!==window.top)document.querySelector(".site-top").hidden=true}catch(e){document.querySelector(".site-top").hidden=true}</script>
+<div class="wrap">
+
+<header class="hero">
+  <svg width="190" viewBox="0 0 190 150" aria-hidden="true">
+    <!-- glass whole → shattered, arrow of time -->
+    <path d="M22 30h40l-6 70h-28z" fill="var(--ice-soft)" stroke="var(--ice)" stroke-width="2.5"/>
+    <path d="M70 70h50" stroke="var(--eye)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M112 58l14 12-14 12" fill="none" stroke="var(--eye)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="var(--ice-soft)" stroke="var(--ice)" stroke-width="2">
+      <path d="M140 100l12-18 6 20z"/><path d="M160 104l10-12 8 14z"/><path d="M146 110l14 2-6 10z"/><path d="M168 88l8-10 4 12z"/>
+    </g>
+    <text x="95" y="140" text-anchor="middle" font-size="14" fill="var(--muted)" font-family="JetBrains Mono,monospace">t →</text>
+  </svg>
+  <div>
+    <span class="tag">UT Austin · NeurIPS 2025 · arXiv 2506.03340</span>
+    <h1>看見時間之箭</h1>
+    <p class="lead">現在的影片模型<b class="bad">分不出影片是正著放還是倒著放</b>。<br>這篇用強化學習（ArrowRL）教會它。</p>
+  </div>
+</header>
+
+<!-- PROBLEM -->
+<section>
+  <span class="tag">問題長怎樣</span>
+  <h2>火關掉的影片，模型說「點火」</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 280" role="img" aria-label="正放和倒放的瓦斯爐影片，原模型都說點火，ArrowRL 能分出點火和熄火">
+      <g font-size="14">
+        <text x="0" y="22" font-weight="700" fill="var(--moss)">正著放</text>
+        <!-- flames grow -->
+        <g>
+          <rect x="90" y="6" width="70" height="56" rx="6" fill="var(--paper)" stroke="var(--line)"/><rect x="104" y="48" width="42" height="6" rx="2" fill="var(--muted)"/>
+          <rect x="170" y="6" width="70" height="56" rx="6" fill="var(--paper)" stroke="var(--line)"/><rect x="184" y="48" width="42" height="6" rx="2" fill="var(--muted)"/><path d="M198 46q7-10 14 0z" fill="var(--ice)"/>
+          <rect x="250" y="6" width="70" height="56" rx="6" fill="var(--paper)" stroke="var(--line)"/><rect x="264" y="48" width="42" height="6" rx="2" fill="var(--muted)"/><path d="M270 46q15-26 30 0z" fill="var(--ice)"/>
+        </g>
+        <text x="0" y="108" font-weight="700" fill="var(--bad)">倒著放</text>
+        <g>
+          <rect x="90" y="84" width="70" height="56" rx="6" fill="var(--paper)" stroke="var(--line)"/><rect x="104" y="126" width="42" height="6" rx="2" fill="var(--muted)"/><path d="M110 124q15-26 30 0z" fill="var(--ice)"/>
+          <rect x="170" y="84" width="70" height="56" rx="6" fill="var(--paper)" stroke="var(--line)"/><rect x="184" y="126" width="42" height="6" rx="2" fill="var(--muted)"/><path d="M198 124q7-10 14 0z" fill="var(--ice)"/>
+          <rect x="250" y="84" width="70" height="56" rx="6" fill="var(--paper)" stroke="var(--line)"/><rect x="264" y="126" width="42" height="6" rx="2" fill="var(--muted)"/>
+        </g>
+        <!-- answers -->
+        <text x="360" y="22" font-weight="700" fill="var(--muted)">原本的 Qwen2.5-VL-7B</text>
+        <rect x="360" y="32" width="200" height="30" rx="6" fill="var(--moss-soft)"/><text x="372" y="52" fill="var(--ink)">「爐火點燃」 ✓</text>
+        <rect x="360" y="110" width="200" height="30" rx="6" fill="var(--bad-soft)"/><text x="372" y="130" fill="var(--ink)">「爐火點燃並持續燃燒」 ✗</text>
+        <text x="590" y="22" font-weight="700" fill="var(--eye)">＋ArrowRL</text>
+        <rect x="590" y="32" width="210" height="30" rx="6" fill="var(--moss-soft)"/><text x="602" y="52" fill="var(--ink)">「爐火點燃」 ✓</text>
+        <rect x="590" y="110" width="210" height="30" rx="6" fill="var(--moss-soft)"/><text x="602" y="130" fill="var(--ink)">「爐火被關掉、慢慢熄滅」 ✓</text>
+
+        <line x1="0" y1="172" x2="800" y2="172" stroke="var(--line)"/>
+        <text x="0" y="206" font-weight="700" fill="var(--ink)">更糟的是，很多 benchmark 根本測不出這個問題：</text>
+        <text x="0" y="236" fill="var(--ink)">LLaVA-OV-7B 在一系列常見影片問答 benchmark 上，影片<tspan font-weight="700" fill="var(--bad)">倒放後只掉 0.9～4.7 分</tspan>，打亂順序也差不多。</text>
+        <text x="0" y="264" fill="var(--muted)">也就是說，很多題目「看多張圖」就能答，但跟順序完全無關。（Fig. 1、Fig. 2）</text>
+      </g>
+    </svg>
+  </div>
+  <div class="trio">
+    <div><span class="big-n" style="color:var(--bad)">50.0%</span><span class="lbl">幾乎所有開源 7B 模型判斷「哪段是倒放」的準確率 = 丟銅板。它們不管看什麼影片，都回答同一個選項。</span></div>
+    <div><span class="big-n">52.8%</span><span class="lbl">GPT-4o 做同一題（ReverseFilm），也只比丟銅板好一點。</span></div>
+    <div><span class="big-n" style="color:var(--moss)">98～100%</span><span class="lbl">對照實驗：倒放影片問「這是什麼動作」，模型全都答得出來。所以問題不是「沒看過倒放影片」，而是<b>看不出方向</b>。</span></div>
+  </div>
+</section>
+
+<!-- INPUT / OUTPUT -->
+<section>
+  <span class="tag">輸入 → 輸出</span>
+  <h2>模型的介面沒變，改的是「怎麼給分數」</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 250" role="img" aria-label="三種訓練資料：方向判斷選擇題、開放問答、描述">
+      <g font-size="14">
+        <text x="0" y="22" font-weight="700" fill="var(--muted)">輸入：影片（訓練時最多 16 張影格）＋ 問題</text>
+        <text x="0" y="46" font-weight="700" fill="var(--muted)">輸出：答案文字。只用了三種訓練資料，總共大約 2.5 萬筆：</text>
+
+        <rect x="0" y="64" width="250" height="176" rx="10" fill="var(--ice-soft)"/>
+        <text x="16" y="92" font-weight="700" fill="var(--ink)" font-size="16">① 方向判斷選擇題</text>
+        <text x="16" y="116" fill="var(--muted)" class="m">UCF101 · 1.1K</text>
+        <text x="16" y="146" fill="var(--ink)">「兩段影片，</text>
+        <text x="16" y="168" fill="var(--ink)">哪一段是倒放？」</text>
+        <text x="16" y="198" fill="var(--ink)">→ 「B」</text>
+        <text x="16" y="224" fill="var(--muted)" font-size="12">答對 1 分，答錯 0 分</text>
+
+        <rect x="275" y="64" width="250" height="176" rx="10" fill="var(--moss-soft)"/>
+        <text x="291" y="92" font-weight="700" fill="var(--ink)" font-size="16">② 開放問答</text>
+        <text x="291" y="116" fill="var(--muted)" class="m">LLaVA-Video-178K · 11.8K</text>
+        <text x="291" y="146" fill="var(--ink)">只挑正放和倒放時</text>
+        <text x="291" y="168" fill="var(--ink)">「困惑度差很多」的題目</text>
+        <text x="291" y="198" fill="var(--ink)">→ 一段文字回答</text>
+        <text x="291" y="224" fill="var(--muted)" font-size="12">用 LLM 打 0～1 分</text>
+
+        <rect x="550" y="64" width="250" height="176" rx="10" fill="var(--eye-soft)"/>
+        <text x="566" y="92" font-weight="700" fill="var(--ink)" font-size="16">③ 影片描述</text>
+        <text x="566" y="116" fill="var(--muted)" class="m">RTime · 11.7K</text>
+        <text x="566" y="146" fill="var(--ink)">正放、倒放各有</text>
+        <text x="566" y="168" fill="var(--ink)">一句人工寫的描述</text>
+        <text x="566" y="198" fill="var(--ink)">→ 「把燈泡裝上」</text>
+        <text x="566" y="224" fill="var(--muted)" font-size="12">用 LLM 打 0～1 分</text>
+      </g>
+    </svg>
+  </div>
+  <p class="note">LLM 評分用的是 Llama-3.1-70B-Instruct，只請它輸出一個 0～1 的相似度分數。</p>
+</section>
+
+<!-- PROCESS -->
+<section>
+  <span class="tag">核心：ArrowRL 怎麼訓練</span>
+  <h2>正著看寫 8 個答案，倒著看寫 1 個；越不像倒放答案的，分數越高</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 400" role="img" aria-label="ArrowRL 流程：正放影片產生 8 個候選答案，倒放影片產生 1 個答案，分數等於跟標準答案的相似度加上跟倒放答案的差異">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+      <g font-size="14">
+        <!-- forward -->
+        <rect x="0" y="20" width="130" height="60" rx="8" fill="var(--moss-soft)" stroke="var(--moss)" stroke-width="2"/>
+        <text x="65" y="46" text-anchor="middle" font-weight="700" fill="var(--ink)">正放影片</text>
+        <text x="65" y="68" text-anchor="middle" fill="var(--muted)" font-size="12">＋問題</text>
+        <!-- reverse -->
+        <rect x="0" y="210" width="130" height="60" rx="8" fill="var(--bad-soft)" stroke="var(--bad)" stroke-width="2"/>
+        <text x="65" y="236" text-anchor="middle" font-weight="700" fill="var(--ink)">倒放影片</text>
+        <text x="65" y="258" text-anchor="middle" fill="var(--muted)" font-size="12">＋同一個問題</text>
+
+        <path d="M136 50h40M136 240h40" stroke="var(--muted)" stroke-width="2" marker-end="url(#ah)"/>
+        <rect x="184" y="20" width="120" height="250" rx="10" fill="var(--paper)" stroke="var(--ink)" stroke-width="2"/>
+        <text x="244" y="140" text-anchor="middle" font-weight="700" fill="var(--ink)" font-size="16">模型</text>
+        <text x="244" y="162" text-anchor="middle" fill="var(--muted)" font-size="12">正在訓練的</text>
+        <text x="244" y="178" text-anchor="middle" fill="var(--muted)" font-size="12">同一個模型</text>
+
+        <path d="M310 50h36" stroke="var(--muted)" stroke-width="2" marker-end="url(#ah)"/>
+        <text x="354" y="18" fill="var(--muted)" font-size="12">溫度 1.0，隨機寫 8 個</text>
+        <g>
+          <rect x="354" y="26" width="30" height="24" rx="4" fill="var(--moss-soft)"/><text x="362" y="43" class="m" font-size="12" fill="var(--ink)">o1</text>
+          <rect x="388" y="26" width="30" height="24" rx="4" fill="var(--moss-soft)"/><text x="396" y="43" class="m" font-size="12" fill="var(--ink)">o2</text>
+          <rect x="422" y="26" width="30" height="24" rx="4" fill="var(--moss-soft)"/><text x="430" y="43" class="m" font-size="12" fill="var(--ink)">o3</text>
+          <text x="458" y="44" fill="var(--muted)">…</text>
+          <rect x="476" y="26" width="30" height="24" rx="4" fill="var(--moss-soft)"/><text x="484" y="43" class="m" font-size="12" fill="var(--ink)">o8</text>
+        </g>
+        <path d="M310 240h36" stroke="var(--muted)" stroke-width="2" marker-end="url(#ah)"/>
+        <text x="354" y="224" fill="var(--muted)" font-size="12">溫度 0，固定寫 1 個</text>
+        <rect x="354" y="230" width="60" height="24" rx="4" fill="var(--bad-soft)"/><text x="364" y="247" class="m" font-size="12" fill="var(--ink)">õ 倒</text>
+
+        <!-- target -->
+        <rect x="354" y="120" width="96" height="30" rx="4" fill="var(--eye-soft)"/><text x="364" y="140" fill="var(--ink)" font-size="13">o★ 標準答案</text>
+
+        <!-- reward box -->
+        <rect x="530" y="20" width="270" height="250" rx="12" fill="var(--eye-soft)" stroke="var(--eye)" stroke-width="2"/>
+        <text x="546" y="48" font-weight="700" fill="var(--ink)" font-size="16">每個 oᵢ 的分數</text>
+        <text x="546" y="84" fill="var(--ink)">① 像不像標準答案</text>
+        <text x="566" y="106" class="m" fill="var(--moss)" font-size="13">sim(oᵢ, o★)</text>
+        <text x="546" y="140" fill="var(--ink)">② 跟倒放答案有多不像</text>
+        <text x="566" y="162" class="m" fill="var(--bad)" font-size="13">α × (1 − sim(oᵢ, õ))</text>
+        <text x="546" y="196" fill="var(--muted)" font-size="13">α = 0.25</text>
+        <text x="546" y="220" fill="var(--muted)" font-size="13">若 õ 本來就跟標準答案很像</text>
+        <text x="546" y="240" fill="var(--muted)" font-size="13">（sim &gt; 0.75）→ 這題 α = 0</text>
+        <path d="M512 38h14M450 135h76M420 242h106" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+
+        <!-- GRPO -->
+        <path d="M665 276v30" stroke="var(--muted)" stroke-width="2" marker-end="url(#ah)"/>
+        <rect x="360" y="314" width="440" height="72" rx="10" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5"/>
+        <text x="378" y="342" font-weight="700" fill="var(--ink)">GRPO：8 個答案互相比</text>
+        <text x="378" y="366" fill="var(--muted)" font-size="13">高於平均的答案 → 以後多寫這種；低於平均的 → 少寫</text>
+        <text x="0" y="342" fill="var(--muted)" font-size="13">重點：倒放影片只拿來當「反例」，</text>
+        <text x="0" y="364" fill="var(--muted)" font-size="13">模型從來不學「倒放影片該怎麼答」。</text>
+      </g>
+    </svg>
+  </div>
+  <p class="note">為什麼要動態關掉 α？有些影片正放和倒放意思一樣（靜態畫面、循環動作），這時候還硬要答案不同，就是在教模型亂講。</p>
+</section>
+
+<!-- REWARD EXAMPLE -->
+<section>
+  <span class="tag">分數實際怎麼算</span>
+  <h2>「放上起司」比「整理起司」分數高，因為它跟倒放答案差最多</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 220" role="img" aria-label="Figure 6 的起司例子">
+      <g font-size="14">
+        <text x="0" y="22" fill="var(--muted)" font-weight="700">問題：描述這支影片。</text>
+        <rect x="0" y="36" width="800" height="44" rx="8" fill="var(--bad-soft)"/>
+        <text x="16" y="64" fill="var(--ink)"><tspan font-weight="700">倒放答案 õ ─ </tspan>有人從木板上<tspan font-weight="700">拿起</tspan>一塊起司。</text>
+
+        <rect x="0" y="96" width="640" height="50" rx="8" fill="var(--paper)" stroke="var(--line)"/>
+        <text x="16" y="126" fill="var(--ink)"><tspan font-weight="700">o1 ─ </tspan>女人的手在盤子上<tspan font-weight="700">整理</tspan>各種起司。（沒講方向）</text>
+        <rect x="656" y="96" width="144" height="50" rx="8" fill="var(--paper)" stroke="var(--line)"/>
+        <text x="728" y="127" text-anchor="middle" class="m" fill="var(--muted)">差異 0.45</text>
+
+        <rect x="0" y="158" width="640" height="50" rx="8" fill="var(--moss-soft)"/>
+        <text x="16" y="188" fill="var(--ink)"><tspan font-weight="700">o2 ─ </tspan>一隻手伸出來，把黃色起司<tspan font-weight="700">放到</tspan>桌上。（講出方向）</text>
+        <rect x="656" y="158" width="144" height="50" rx="8" fill="var(--eye)"/>
+        <text x="728" y="189" text-anchor="middle" class="m" fill="var(--ink)" font-weight="700">差異 0.80</text>
+      </g>
+    </svg>
+  </div>
+  <p class="note">標準答案只保證「內容對」。倒放答案負責逼模型「把方向講清楚」，兩者缺一不可。</p>
+</section>
+
+<!-- TDS / AoTBench -->
+<section>
+  <span class="tag">順便做的：怎麼挑「真的在考時間」的題目</span>
+  <h2>TDS：把影片倒過來，看模型的信心變多少</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 250" role="img" aria-label="TDS 以正放和倒放的選項機率分佈的 KL 散度衡量">
+      <g font-size="14">
+        <!-- low TDS -->
+        <text x="0" y="22" font-weight="700" fill="var(--ink)">低 TDS：「他用哪隻手藏東西？」</text>
+        <g>
+          <rect x="0" y="40" width="30" height="80" fill="var(--moss)"/><rect x="36" y="100" width="30" height="20" fill="var(--moss)"/>
+          <rect x="100" y="44" width="30" height="76" fill="var(--bad)"/><rect x="136" y="96" width="30" height="24" fill="var(--bad)"/>
+          <text x="0" y="140" fill="var(--muted)" font-size="12">正放</text><text x="100" y="140" fill="var(--muted)" font-size="12">倒放</text>
+          <text x="0" y="166" fill="var(--ink)">分佈幾乎一樣 → 這題不用看方向</text>
+        </g>
+        <!-- high TDS -->
+        <text x="420" y="22" font-weight="700" fill="var(--ink)">高 TDS：「粉紅花發生什麼事？」</text>
+        <g>
+          <rect x="420" y="40" width="30" height="80" fill="var(--moss)"/><rect x="456" y="108" width="30" height="12" fill="var(--moss)"/>
+          <rect x="520" y="108" width="30" height="12" fill="var(--bad)"/><rect x="556" y="40" width="30" height="80" fill="var(--bad)"/>
+          <text x="420" y="140" fill="var(--muted)" font-size="12">正放</text><text x="520" y="140" fill="var(--muted)" font-size="12">倒放</text>
+          <text x="420" y="166" fill="var(--ink)">答案整個翻過來 → 這題真的在考時間</text>
+        </g>
+        <text x="0" y="206" fill="var(--ink)">TDS = KL（正放時選項的機率 ‖ 倒放時選項的機率）</text>
+        <text x="0" y="234" fill="var(--muted)">結果：TVBench、Vinoground、TempCompass 對時間敏感；VITATECS、TemporalBench、NExT-QA 不太敏感。</text>
+      </g>
+    </svg>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>AoTBench 的三種考題</th><th>來源</th><th class="num">題數</th></tr></thead>
+      <tbody>
+        <tr><td>方向判斷：哪段是倒放？</td><td>ReverseFilm、UCF101</td><td class="num">144 + 500</td></tr>
+        <tr><td>描述配對：這段影片配哪句話？（V2T）／這句話配哪段影片？（T2V）</td><td>RTime</td><td class="num">1,992 + 1,992</td></tr>
+        <tr><td>時間敏感問答：8 個 benchmark 各挑 TDS 最高的 200 題</td><td>TVBench、Vinoground 等</td><td class="num">1,800</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section>
+  <span class="tag">結果</span>
+  <h2>三個不同的底座模型，全部變好</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>底座模型</th><th class="num">方向判斷<br><span class="note">UCF101</span></th><th class="num">時間敏感問答</th><th class="num">Vinoground<br><span class="note">Group</span></th><th class="num">TVBench</th></tr></thead>
+      <tbody>
+        <tr><td>LLaVA-OV-7B</td><td class="num">51.6 → 57.4</td><td class="num">46.2 → 53.2</td><td class="num">14.8 → 17.6</td><td class="num">48.9 → 49.9</td></tr>
+        <tr><td>Qwen2-VL-7B</td><td class="num us">51.6 → 72.6</td><td class="num">44.3 → 51.1</td><td class="num">14.4 → 20.0</td><td class="num">48.6 → 51.5</td></tr>
+        <tr><td>Qwen2.5-VL-7B</td><td class="num">51.6 → 54.8</td><td class="num us">49.6 → 58.8</td><td class="num us">16.4 → 27.2</td><td class="num">54.7 → 56.2</td></tr>
+        <tr><td><span class="note">參考：GPT-4o</span></td><td class="num">54.0</td><td class="num">67.8</td><td class="num">24.6</td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="trio">
+    <div><span class="big-n" style="color:var(--moss)">+21.0</span><span class="lbl">Qwen2-VL 判斷「哪段是倒放」，從丟銅板變成 72.6%，遠超過 GPT-4o。</span></div>
+    <div><span class="big-n" style="color:var(--moss)">+65.9%</span><span class="lbl">Qwen2.5-VL 在 Vinoground Group 的相對進步（16.4 → 27.2），也超過 GPT-4o 的 24.6。</span></div>
+    <div><span class="big-n">≈ 0</span><span class="lbl">一般 benchmark（VideoMME、NExT-QA 等）沒有退步，還小幅上升，例如 NExT-QA 77.1 → 78.1。</span></div>
+  </div>
+  <p class="note">論文觀察：底座本來視覺比較強的（Qwen2-VL），方向判斷進步最多；語言比較強的（Qwen2.5-VL），時間問答進步最多。ArrowRL 是把底座原本的強項「接上時間」。數字取自 Table 1、2。</p>
+</section>
+
+<!-- ABLATION -->
+<section>
+  <span class="tag">消融實驗（Qwen2.5-VL-7B，AoTBench 平均）</span>
+  <h2>同樣的資料，用 SFT 只加 1.2 分，用 ArrowRL 加 5.2 分</h2>
+  <div class="big">
+    <svg viewBox="0 0 800 250" role="img" aria-label="消融長條圖">
+      <g font-size="14">
+        <!-- scale 50..65 → x 300..780, 32 px per point -->
+        <line x1="300" y1="20" x2="300" y2="214" stroke="var(--line)"/>
+        <text x="300" y="236" text-anchor="middle" class="m" fill="var(--muted)" font-size="12">50</text>
+        <text x="460" y="236" text-anchor="middle" class="m" fill="var(--muted)" font-size="12">55</text>
+        <text x="620" y="236" text-anchor="middle" class="m" fill="var(--muted)" font-size="12">60</text>
+        <text x="780" y="236" text-anchor="middle" class="m" fill="var(--muted)" font-size="12">65</text>
+        <line x1="460" y1="20" x2="460" y2="214" stroke="var(--line)" stroke-dasharray="3 4"/>
+        <line x1="620" y1="20" x2="620" y2="214" stroke="var(--line)" stroke-dasharray="3 4"/>
+
+        <text x="0" y="40" fill="var(--ink)">原模型</text>
+        <rect x="300" y="24" width="198.4" height="24" rx="4" fill="var(--ice)"/><text x="506" y="41" class="m" fill="var(--ink)">56.2</text>
+
+        <text x="0" y="78" fill="var(--ink)">＋SFT（同一份資料）</text>
+        <rect x="300" y="62" width="236.8" height="24" rx="4" fill="var(--line)"/><text x="544" y="79" class="m" fill="var(--ink)">57.4</text>
+
+        <text x="0" y="116" fill="var(--ink)">＋ArrowRL（只用 LLaVA-Video 描述）</text>
+        <rect x="300" y="100" width="246.4" height="24" rx="4" fill="var(--eye-soft)" stroke="var(--eye)"/><text x="554" y="117" class="m" fill="var(--ink)">57.7</text>
+
+        <text x="0" y="154" fill="var(--ink)">＋ArrowRL（只用 RTime 描述）</text>
+        <rect x="300" y="138" width="332.8" height="24" rx="4" fill="var(--eye-soft)" stroke="var(--eye)"/><text x="640" y="155" class="m" fill="var(--ink)">60.4</text>
+
+        <text x="0" y="192" fill="var(--ink)" font-weight="700">＋ArrowRL（完整挑過的資料）</text>
+        <rect x="300" y="176" width="364.8" height="24" rx="4" fill="var(--eye)"/><text x="672" y="193" class="m" fill="var(--ink)" font-weight="700">61.4</text>
+      </g>
+    </svg>
+  </div>
+  <p class="note">另外兩個發現（Fig. 7）：<b class="bad">拿掉倒放分數（α = 0），結果比原模型還差</b>；關掉「動態 α」（γ = 1），進步幅度變小。也就是說，挑「對時間敏感」的資料，和加上倒放分數，兩者都必要。</p>
+</section>
+
+<!-- COMPARE -->
+<section>
+  <span class="tag">跟其他訓練流程比</span>
+  <h2>大家都在用「弄亂時間」當訊號，差別在怎麼用</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>做法</th><th>怎麼用時間訊號</th><th>缺點</th></tr></thead>
+      <tbody>
+        <tr><td><b>早期自監督</b><br><span class="note">Arrow of Time 分類、順序預測</span></td><td>純視覺模型：判斷正放 / 倒放，或把影格排回正確順序</td><td>只學到物理線索，跟語言沒有連結</td></tr>
+        <tr><td><b>雙編碼器對比學習</b><br><span class="note">Test of Time 等</span></td><td>把倒放影片當成影片-文字對齊的負例</td><td>只適用 CLIP 類架構，只學「之前 / 之後」這類簡單概念</td></tr>
+        <tr><td><b>SFT</b></td><td>直接模仿標準答案</td><td>標準答案沒寫方向，模型就學不到；同樣資料只加 1.2 分</td></tr>
+        <tr><td><b>Tarsier2 DPO</b></td><td>交換片段或倒放後產生的描述，事先配成「好 / 壞」一對（離線）</td><td>要先做好一批配對，還要用 AutoDQ 過濾</td></tr>
+        <tr><td><b>Video-R1 T-GRPO</b></td><td>比較正常順序和打亂順序時的答對率</td><td>重點放在推理（思維鏈），不是方向本身</td></tr>
+        <tr class="us"><td class="us"><b>ArrowRL</b></td><td class="us">每一步都即時算倒放答案當反例（線上），並依題目動態開關</td><td class="us">需要一個 70B 的 LLM 當評審；目前只做短影片、16 張影格</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">成本：直接在現成模型上做 RL，<b>不需要先做 SFT</b>。2000 步，6 張 GH200 大約 3 天。論文沒有寫是全參數還是 LoRA。</p>
+</section>
+
+<!-- INSIGHTS -->
+<section>
+  <span class="tag">論文重點觀察</span>
+  <h2>值得帶走的七件事</h2>
+  <div class="ins">
+    <div class="in"><span class="n">1</span><h3>模型的「時間盲」比想像中嚴重</h3><p>7B 開源模型判斷正放還是倒放，全部停在 50%，而且不管看什麼影片都回答同一個選項。</p></div>
+    <div class="in"><span class="n">2</span><h3>不是沒看過倒放影片</h3><p>倒放影片的動作分類照樣 98～100% 答對，所以問題出在方向感，不是沒見過這種資料。</p></div>
+    <div class="in"><span class="n">3</span><h3>「要看多張圖」≠「要看順序」</h3><p>大家都在防「單張影格偏誤」，但很多多影格題目打亂順序照樣能答。</p></div>
+    <div class="in"><span class="n">4</span><h3>用倒放後的信心變化挑題目</h3><p>TDS 比「答案有沒有翻」更細，可以替整份 benchmark 排出時間敏感度。</p></div>
+    <div class="in"><span class="n">5</span><h3>SFT 教不會方向</h3><p>標準答案常常沒寫方向，模仿它也就學不到。需要一個「不能跟倒放答案一樣」的反向壓力。</p></div>
+    <div class="in"><span class="n">6</span><h3>反向壓力要看題目開關</h3><p>全部題目都硬加倒放分數會變差。倒放答案本來就對的題目，要把倒放分數關掉。</p></div>
+    <div class="in"><span class="n">7</span><h3>方向感會擴散到其他能力</h3><p>只用 2.5 萬筆資料練方向，Vinoground、TVBench 等外部 benchmark 也跟著進步，一般能力沒有退步。</p></div>
+  </div>
+</section>
+
+<!-- FOR YOU -->
+<section class="you">
+  <span class="tag">對你的 Gemma FFT with temporal understanding</span>
+  <h2>可以直接用的</h2>
+  <ul>
+    <li><b>先量，再訓練</b>：拿你現在的 FFT checkpoint，在 eval 集上分別用「正放 / 打亂 / 倒放」跑一次。三個分數差不多，就代表模型沒在用時間資訊，這是你之後比較的 baseline。</li>
+    <li><b>SFT 版的方向題</b>：把 Kinetics 影片接成 <code>[正放][黑畫面][倒放]</code>，問「哪一段是倒放？」。這完全不用標註，可以直接混進 FFT 資料。但要注意，論文顯示單靠 SFT 效果有限（+1.2）。</li>
+    <li><b>篩掉「倒放也一樣」的影片</b>：用你的模型算正放和倒放時的 loss 或困惑度差，只把差距大的影片拿來做時間任務。這就是論文挑 LLaVA-Video 資料的方法。</li>
+    <li><b>下一步可以做 RL</b>：你的答案是動作類別，所以相似度可以直接用「是否完全一樣」（0 / 1），不需要 70B 的評審。但 Kinetics 很多動作倒放後類別還是一樣（例如跑步），這時候 γ 的開關會自動把倒放分數關掉。</li>
+  </ul>
+  <p class="note">論文公布的 hyperparameter：α = 0.25、γ = 0.75、每題 8 個候選答案、16 張影格、2000 步。</p>
+</section>
+
+<p class="note">來源：Xue, Luo, Grauman. <i>Seeing the Arrow of Time in Large Multimodal Models</i>. NeurIPS 2025, arXiv 2506.03340v2。數字取自正文 Table 1～3、Fig. 2、Fig. 6、Fig. 7 與附錄 Table 4、6。</p>
+</div>
+</body>
+</html>
