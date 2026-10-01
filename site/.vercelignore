@@ -1,4 +1,0 @@
-# 只上傳網站本身；vercel link 產生的 .env.local、.vercel 等檔案都不會被上傳
-/*
-!index.html
-!pages

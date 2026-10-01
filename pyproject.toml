@@ -1,0 +1,9 @@
+[project]
+name = "gemma4-e4b-ft"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "accelerate>=1.15.0",
+    "torch>=2.14.1",
+    "transformers>=5",
+]
