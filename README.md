@@ -80,3 +80,12 @@ bash scripts/full_ft.sh
 ## Evaluation
 
 Handled in a separate repo (not included here).
+
+## Restore missing weights after training
+
+Run `python merge/merge.py --finetune ./output/gemma4_e2b_kinetics384K_FFT
+--base google/gemma-4-E2B-it` to restore missing base tensors directly into a
+local training checkpoint. The merged model is written to a new sibling directory
+ending in `-merged` only after every saved tensor is verified against its source.
+See [merge/README.md](merge/README.md) for base selection, offline use, and
+independent verification.

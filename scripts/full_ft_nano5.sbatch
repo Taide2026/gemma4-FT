@@ -156,13 +156,13 @@ fi
 
 # These paths must match config/full_ft.py.
 
-TRAIN_JSON="./dataset/gemma-4-e4b-kinetics_330K/annotations/train.json"
+TRAIN_JSON="/home/$USER/datasets/gemma-4-e4b-kinetics_33K/annotations/train.json"
 
-VAL_JSON="./dataset/gemma-4-e4b-kinetics_330K/annotations/val.json"
+VAL_JSON="/home/$USER/datasets/gemma-4-e4b-kinetics_33K/annotations/val.json"
 
-MEDIA_DIR="./dataset/gemma-4-e4b-kinetics_330K"
+MEDIA_DIR="/home/$USER/datasets/gemma-4-e4b-kinetics_33K"
 
-OUTPUT_DIR="./output/gemma4_e4b_kinetics54K_MQ_FFT"
+OUTPUT_DIR="./output/gemma4_e2b_kinetics384K_FFT"
 
 
 if [[ ! -f "$TRAIN_JSON" ]]; then

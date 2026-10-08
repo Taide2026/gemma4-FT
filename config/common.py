@@ -1,5 +1,5 @@
 COMMON_TRAINING_DEFAULTS = {
-    "model_name": "THChou1220/gemma-4-e4b-kinetics54K-MQ_FFT",
+    "model_name": "THChou1220/gemma-4-e2b-kinetics384K_FFT",
     "deepspeed_config": "deepspeed_config/stage1.json",
     "master_port": "29500",
     "bf16": "False",

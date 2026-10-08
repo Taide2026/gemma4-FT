@@ -3,11 +3,11 @@ from config.common import COMMON_TRAINING_DEFAULTS
 
 TRAINING_PROFILE = {
     **COMMON_TRAINING_DEFAULTS,
-    "data_path": "./dataset/gemma-4-e4b-kinetics_330K/annotations/train.json",
-    "eval_data_path": "./dataset/gemma-4-e4b-kinetics_330K/annotations/val.json",
-    "image_folder": "./dataset/gemma-4-e4b-kinetics_330K",
-    "output_dir": "./output/gemma4_e4b_kinetics54K_MQ_FFT",
-    "run_name": "gemma-4-e4b-kinetics54K-MQ_FFT",
+    "data_path": "/home/$USER/datasets/gemma-4-e4b-kinetics_33K/annotations/train.json",
+    "eval_data_path": "/home/$USER/datasets/gemma-4-e4b-kinetics_33K/annotations/val.json",
+    "image_folder": "/home/$USER/datasets/gemma-4-e4b-kinetics_33K",
+    "output_dir": "./output/gemma4_e2b_kinetics384K_FFT",
+    "run_name": "gemma-4-e2b-kinetics384K_FFT",
     "training_mode": "full",
     "num_gpus": 4,
     "optim": "adamw_torch",
