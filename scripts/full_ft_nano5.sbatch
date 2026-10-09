@@ -162,7 +162,7 @@ VAL_JSON="/home/$USER/datasets/gemma-4-e4b-kinetics_33K/annotations/val.json"
 
 MEDIA_DIR="/home/$USER/datasets/gemma-4-e4b-kinetics_33K"
 
-OUTPUT_DIR="./output/gemma4_e2b_kinetics384K_FFT"
+OUTPUT_DIR="./output/gemma4_e4b_kinetics384K_FFT"
 
 
 if [[ ! -f "$TRAIN_JSON" ]]; then
